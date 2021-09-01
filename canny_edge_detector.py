@@ -45,6 +45,7 @@ def threshold(non_max_suppressed_image, t1, t2):
     
 def hysterisis(strong, weak):
     final_edge_map = strong.copy()
+    M, N = strong.shape
     for i in range(M):
         for j in range(N):
             if weak[i, j] == 1:
@@ -59,7 +60,6 @@ def hysterisis(strong, weak):
 
 # Read image to apply algorithm
 img = cv2.imread('Lanes.jpg', cv2.IMREAD_GRAYSCALE)
-M, N = img.shape
 
 # Gaussian Smoothing to reduce noise
 smoothened_img = gaussian_filter(img, 3)
@@ -91,3 +91,42 @@ weak = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
 # edge-tracking by hysterisis
 final_edge_map = np.zeros_like(non_max_suppressed_image)
 final_edge_map = hysterisis(strong, weak)
+
+# plot the results
+plt.figure()
+plt.subplot(121)
+plt.imshow(magnitude_grad, cmap = 'gray')
+plt.subplot(122)
+plt.imshow(non_max_suppressed_image, cmap = 'gray')
+
+plt.figure()
+plt.subplot(121)
+weak_img_plt = plt.imshow(weak, cmap = 'gray')
+plt.subplot(122)
+strong_img_plt = plt.imshow(strong, cmap = 'gray')
+
+plt.figure()
+plt.subplots_adjust(left=0.1,bottom=0.35)
+axcolor = 'lightgoldenrodyellow'
+t1_axes = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
+t2_axes = plt.axes([0.25, 0.1, 0.65, 0.03], facecolor=axcolor)
+t1_vals = Slider(t1_axes, 'strong', 0, 0.5, valinit = t1)
+t2_vals = Slider(t2_axes, 'weak', 0, 0.5, valinit = t2, slidermax = t1_vals)
+t1_vals.slidermin = t2_vals
+plt.subplot(111)
+final_edge_plot = plt.imshow(final_edge_map, cmap = 'gray')
+
+def update(val):
+    t1 = t1_vals.val
+    t2 = t2_vals.val
+    strong = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
+    weak = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
+    (strong, weak) = threshold(non_max_suppressed_image, t1, t2)
+    strong_img_plt.set_data(strong)
+    weak_img_plt.set_data(weak)
+    final_edge_map = np.zeros_like(non_max_suppressed_image)
+    final_edge_map = hysterisis(strong, weak)
+    final_edge_plot.set_data(final_edge_map)
+    
+t1_vals.on_changed(update)
+t2_vals.on_changed(update)
