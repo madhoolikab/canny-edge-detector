@@ -35,6 +35,28 @@ def non_maximal_suppression(img, angle_grad):
             
     return non_max_suppressed_image
 
+def threshold(non_max_suppressed_image, t1, t2):
+    strong = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
+    weak = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
+    strong[non_max_suppressed_image > t1] = 1
+    weak[non_max_suppressed_image > t2] = 1
+    
+    return (strong, weak)
+    
+def hysterisis(strong, weak):
+    final_edge_map = strong.copy()
+    for i in range(M):
+        for j in range(N):
+            if weak[i, j] == 1:
+                try:
+                    if ((strong[i+1, j-1] == 1) or (strong[i+1, j] == 1) or (strong[i+1, j+1] == 1)
+                        or (strong[i, j-1] == 1) or (strong[i, j+1] == 1)
+                        or (strong[i-1, j-1] == 1) or (strong[i-1, j] == 1) or (strong[i-1, j+1] == 1)):
+                        final_edge_map[i, j] = 1
+                except IndexError as e:
+                    pass
+    return final_edge_map
+
 # Read image to apply algorithm
 img = cv2.imread('Lanes.jpg', cv2.IMREAD_GRAYSCALE)
 M, N = img.shape
@@ -57,5 +79,15 @@ magnitude_grad = np.sqrt((grad_x * grad_x) + (grad_y*grad_y))
 angle_grad = 180.0 * np.arctan2(grad_y, grad_x)/np.pi
 angle_grad[angle_grad <= 0] += 180
 
+# non-maximal suppresion
 non_max_suppressed_image = non_maximal_suppression(magnitude_grad, angle_grad)
 non_max_suppressed_image = np.divide(non_max_suppressed_image, 255)
+
+# double-thresholding
+strong = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
+weak = np.zeros_like(non_max_suppressed_image, dtype = np.uint8)
+(strong, weak) = threshold(non_max_suppressed_image, t1, t2)
+
+# edge-tracking by hysterisis
+final_edge_map = np.zeros_like(non_max_suppressed_image)
+final_edge_map = hysterisis(strong, weak)
